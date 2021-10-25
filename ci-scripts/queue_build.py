@@ -132,7 +132,6 @@ def _file_older_than(file):
 
 
 def _write_ticket(filename, status="waiting"):
-
     file_path = "ci-integ-queue/{}".format(status)
     if not os.path.exists(file_path):
         os.makedirs(file_path)
