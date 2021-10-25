@@ -30,7 +30,7 @@ def queue_build():
     ticket_number = int(1000 * time.time())
     files = _list_tickets()
     _cleanup_tickets_older_than(files)
-    _wait_for_other_builds(files, ticket_number)
+    _wait_for_other_builds(ticket_number)
 
 
 def _build_info_from_file(file):
@@ -39,7 +39,7 @@ def _build_info_from_file(file):
     return int(ticket_number), build_id, source_version
 
 
-def _wait_for_other_builds(files, ticket_number):
+def _wait_for_other_builds(ticket_number):
     sorted_files = _list_tickets()
 
     print("build queue status:")
@@ -62,6 +62,7 @@ def _wait_for_other_builds(files, ticket_number):
     while True:
         _cleanup_tickets_with_terminal_states()
         waiting_tickets = _list_tickets("waiting")
+        print("Build %s waiting to be scheduled" % filename)
         if waiting_tickets:
             first_waiting_ticket_number, _, _ = _build_info_from_file(_list_tickets("waiting")[0])
         else:
@@ -79,7 +80,6 @@ def _wait_for_other_builds(files, ticket_number):
             break
         else:
             # wait
-            print("Build %s waiting to be scheduled" % filename)
             time.sleep(30)
 
 
@@ -103,7 +103,7 @@ def _cleanup_tickets_with_terminal_states():
         build_status = response["builds"][0]["buildStatus"]
 
         if build_status != "IN_PROGRESS":
-            print("Build %s in terminal state: %s, deleting lock" % build_id, build_status)
+            print("Build %s in terminal state: %s, deleting lock" % (build_id, build_status))
             file.delete()
 
 
