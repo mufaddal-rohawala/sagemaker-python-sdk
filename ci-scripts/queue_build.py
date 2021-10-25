@@ -57,7 +57,6 @@ def _wait_for_other_builds(files, ticket_number):
     )
     filename = "%s_%s_%s" % (ticket_number, build_id, source_version)
     _write_ticket(filename, status="waiting")
-    print("Created queue ticket %s in waiting" % ticket_number)
 
     while True:
         _cleanup_tickets_with_terminal_states()
@@ -78,6 +77,7 @@ def _wait_for_other_builds(files, ticket_number):
             break
         else:
             # wait
+            print("Build %s waiting to be scheduled" % filename)
             time.sleep(30)
 
 
@@ -133,6 +133,7 @@ def _delete_ticket(filename, status="waiting"):
     file_path = "ci-integ-queue/{}".format(status)
     file_full_path = file_path + "/" + filename
     boto3.Session().resource("s3").Object(bucket_name, file_full_path).delete()
+    print("Lock for build %s in state %s is deleted" % (filename, status))
 
 
 def _write_ticket(filename, status="waiting"):
@@ -145,6 +146,7 @@ def _write_ticket(filename, status="waiting"):
     with open(file_full_path, "w") as file:
         file.write(filename)
     boto3.Session().resource("s3").Object(bucket_name, file_full_path).upload_file(file_full_path)
+    print("Build %s is now in state %s" % (filename, status))
 
 
 if __name__ == "__main__":
