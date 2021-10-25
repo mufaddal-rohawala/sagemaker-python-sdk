@@ -48,13 +48,8 @@ def _wait_for_other_builds(files, ticket_number):
     for order, file in enumerate(sorted_files):
         file_ticket_number, build_id, source_version = _build_info_from_file(file)
         print(
-            "%s -> %s %s, ticket number: %s status: %s" % (
-                order,
-                build_id,
-                source_version,
-                file_ticket_number,
-                file.key.split("/")[1]
-            )
+            "%s -> %s %s, ticket number: %s status: %s"
+            % (order, build_id, source_version, file_ticket_number, file.key.split("/")[1])
         )
     print()
     build_id = os.environ.get("CODEBUILD_BUILD_ID", "CODEBUILD-BUILD-ID")
