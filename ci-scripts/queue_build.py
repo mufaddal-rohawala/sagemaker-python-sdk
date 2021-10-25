@@ -58,11 +58,11 @@ def _wait_for_other_builds(ticket_number):
     )
     filename = "%s_%s_%s" % (ticket_number, build_id, source_version)
     s3_file_obj = _write_ticket(filename, status="waiting")
+    print("Build %s waiting to be scheduled" % filename)
 
     while True:
         _cleanup_tickets_with_terminal_states()
         waiting_tickets = _list_tickets("waiting")
-        print("Build %s waiting to be scheduled" % filename)
         if waiting_tickets:
             first_waiting_ticket_number, _, _ = _build_info_from_file(_list_tickets("waiting")[0])
         else:
@@ -87,11 +87,10 @@ def last_in_progress_elapsed_time_check():
     in_progress_tickets = _list_tickets("in-progress")
     if not in_progress_tickets:
         return True
-    else:
-        last_in_progress_ticket, _, _ = _build_info_from_file(_list_tickets("in-progress")[-1])
-        _elapsed_time = int(1000 * time.time()) - last_in_progress_ticket
-        last_in_progress_elapsed_time = int(_elapsed_time / (1000 * 60))  # in minutes
-        return last_in_progress_elapsed_time > INTERVAL_BETWEEN_CONCURRENT_RUNS
+    last_in_progress_ticket, _, _ = _build_info_from_file(_list_tickets("in-progress")[-1])
+    _elapsed_time = int(1000 * time.time()) - last_in_progress_ticket
+    last_in_progress_elapsed_time = int(_elapsed_time / (1000 * 60))  # in minutes
+    return last_in_progress_elapsed_time > INTERVAL_BETWEEN_CONCURRENT_RUNS
 
 
 def _cleanup_tickets_with_terminal_states():
