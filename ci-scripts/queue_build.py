@@ -48,15 +48,21 @@ def _wait_for_other_builds(files, ticket_number):
     for order, file in enumerate(sorted_files):
         file_ticket_number, build_id, source_version = _build_info_from_file(file)
         print(
-            "%s -> %s %s, ticket number: %s" % (order, build_id, source_version, file_ticket_number)
+            "%s -> %s %s, ticket number: %s status: %s" % (
+                order,
+                build_id,
+                source_version,
+                file_ticket_number,
+                file.key.split("/")[1]
+            )
         )
-
+    print()
     build_id = os.environ.get("CODEBUILD_BUILD_ID", "CODEBUILD-BUILD-ID")
     source_version = os.environ.get("CODEBUILD_SOURCE_VERSION", "CODEBUILD-SOURCE-VERSION").replace(
         "/", "-"
     )
     filename = "%s_%s_%s" % (ticket_number, build_id, source_version)
-    _write_ticket(filename, status="waiting")
+    s3_file_obj = _write_ticket(filename, status="waiting")
 
     while True:
         _cleanup_tickets_with_terminal_states()
@@ -72,7 +78,8 @@ def _wait_for_other_builds(files, ticket_number):
             and first_waiting_ticket_number == ticket_number
         ):
             # put the build in progress
-            _delete_ticket(filename, status="waiting")
+            print("Scheduling build %s for running.." % filename)
+            s3_file_obj.delete()
             _write_ticket(filename, status="in-progress")
             break
         else:
@@ -101,7 +108,7 @@ def _cleanup_tickets_with_terminal_states():
         build_status = response["builds"][0]["buildStatus"]
 
         if build_status != "IN_PROGRESS":
-            print("build %s in terminal state: %s, deleting lock" % build_id, build_status)
+            print("Build %s in terminal state: %s, deleting lock" % build_id, build_status)
             file.delete()
 
 
@@ -129,13 +136,6 @@ def _file_older_than(file):
     return int(1000 * time.time()) - file_ticket_number > timelimit
 
 
-def _delete_ticket(filename, status="waiting"):
-    file_path = "ci-integ-queue/{}".format(status)
-    file_full_path = file_path + "/" + filename
-    boto3.Session().resource("s3").Object(bucket_name, file_full_path).delete()
-    print("Lock for build %s in state %s is deleted" % (filename, status))
-
-
 def _write_ticket(filename, status="waiting"):
 
     file_path = "ci-integ-queue/{}".format(status)
@@ -145,8 +145,10 @@ def _write_ticket(filename, status="waiting"):
     file_full_path = file_path + "/" + filename
     with open(file_full_path, "w") as file:
         file.write(filename)
-    boto3.Session().resource("s3").Object(bucket_name, file_full_path).upload_file(file_full_path)
+    s3_file_obj = boto3.Session().resource("s3").Object(bucket_name, file_full_path)
+    s3_file_obj.upload_file(file_full_path)
     print("Build %s is now in state %s" % (filename, status))
+    return s3_file_obj
 
 
 if __name__ == "__main__":
