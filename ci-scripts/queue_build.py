@@ -61,13 +61,15 @@ def _wait_for_other_builds(files, ticket_number):
 
     while True:
         _cleanup_tickets_with_terminal_states()
-        first_waiting_ticket_number, _, _ = _build_info_from_file(_list_tickets("waiting")[0])
-        last_in_progress_ticket, _, _ = _build_info_from_file(_list_tickets("in-progress")[-1])
-        _elapsed_time = int(1000 * time.time()) - last_in_progress_ticket
-        last_in_progress_elapsed_time = int(_elapsed_time / (1000 * 60))  # in minutes
+        waiting_tickets = _list_tickets("waiting")
+        if waiting_tickets:
+            first_waiting_ticket_number, _, _ = _build_info_from_file(_list_tickets("waiting")[0])
+        else:
+            first_waiting_ticket_number = ticket_number
+
         if (
             len(_list_tickets(status="in-progress")) < 3
-            and last_in_progress_elapsed_time > INTERVAL_BETWEEN_CONCURRENT_RUNS
+            and last_in_progress_elapsed_time_check()
             and first_waiting_ticket_number == ticket_number
         ):
             # put the build in progress
@@ -77,6 +79,17 @@ def _wait_for_other_builds(files, ticket_number):
         else:
             # wait
             time.sleep(30)
+
+
+def last_in_progress_elapsed_time_check():
+    in_progress_tickets = _list_tickets("in-progress")
+    if not in_progress_tickets:
+        return True
+    else:
+        last_in_progress_ticket, _, _ = _build_info_from_file(_list_tickets("in-progress")[-1])
+        _elapsed_time = int(1000 * time.time()) - last_in_progress_ticket
+        last_in_progress_elapsed_time = int(_elapsed_time / (1000 * 60))  # in minutes
+        return last_in_progress_elapsed_time > INTERVAL_BETWEEN_CONCURRENT_RUNS
 
 
 def _cleanup_tickets_with_terminal_states():
