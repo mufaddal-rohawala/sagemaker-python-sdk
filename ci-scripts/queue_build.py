@@ -65,9 +65,11 @@ def _wait_for_other_builds(files, ticket_number):
         last_in_progress_ticket, _, _ = _build_info_from_file(_list_tickets("in-progress")[-1])
         _elapsed_time = int(1000 * time.time()) - last_in_progress_ticket
         last_in_progress_elapsed_time = int(_elapsed_time / (1000 * 60))  # in minutes
-        if (len(_list_tickets(status="in-progress")) < 3 and
-                last_in_progress_elapsed_time > INTERVAL_BETWEEN_CONCURRENT_RUNS and
-                first_waiting_ticket_number == ticket_number):
+        if (
+            len(_list_tickets(status="in-progress")) < 3
+            and last_in_progress_elapsed_time > INTERVAL_BETWEEN_CONCURRENT_RUNS
+            and first_waiting_ticket_number == ticket_number
+        ):
             # put the build in progress
             _delete_ticket(filename, status="waiting")
             _write_ticket(filename, status="in-progress")
