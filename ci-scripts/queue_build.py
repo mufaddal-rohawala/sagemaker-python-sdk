@@ -108,7 +108,10 @@ def _cleanup_tickets_with_terminal_states():
         build_status = build_details["buildStatus"]
 
         if build_status != "IN_PROGRESS" and _build_id_from_file == build_details["id"]:
-            print("Build %s in terminal state: %s, deleting lock" % (_build_id_from_file, build_status))
+            print(
+                "Build %s in terminal state: %s, deleting lock"
+                % (_build_id_from_file, build_status)
+            )
             file.delete()
 
 
