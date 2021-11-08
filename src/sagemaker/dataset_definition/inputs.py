@@ -141,3 +141,4 @@ class S3Input(ApiObject):
     s3_input_mode = "File"
     s3_data_distribution_type = "FullyReplicated"
     s3_compression_type = None
+
