@@ -134,6 +134,7 @@ class S3Input(ApiObject):
         s3_data_distribution_type (str): Valid options are "FullyReplicated" or "ShardedByS3Key".
         s3_compression_type (str): Valid options are "None" or "Gzip".
     """
+
     s3_uri = None
     local_path = None
     s3_data_type = "S3Prefix"
