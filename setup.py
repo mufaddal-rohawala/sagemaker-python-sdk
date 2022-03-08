@@ -49,7 +49,7 @@ required_packages = [
 # Specific use case dependencies
 extras = {
     "local": [
-        "urllib3==1.26.8",
+        "urllib3==1.22",
         "docker-compose==1.29.2",
         "docker~=5.0.0",
         "PyYAML==5.4.1",  # PyYAML version has to match docker-compose requirements
