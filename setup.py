@@ -44,7 +44,6 @@ required_packages = [
     "packaging>=20.0",
     "pandas",
     "pathos",
-    "urllib3==1.22",
 ]
 
 # Specific use case dependencies
@@ -82,6 +81,7 @@ extras["test"] = (
         "fabric==2.6.0",
         "requests==2.27.1",
         "sagemaker-experiments==0.1.35",
+        "urllib3==1.22",
     ],
 )
 
