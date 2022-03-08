@@ -44,6 +44,7 @@ required_packages = [
     "packaging>=20.0",
     "pandas",
     "pathos",
+    "urllib3==1.22",
 ]
 
 # Specific use case dependencies
