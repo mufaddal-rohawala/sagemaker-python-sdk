@@ -48,6 +48,7 @@ BUCKET = "my-s3-bucket"
 S3_URI = f"s3://{BUCKET}/keyprefix"
 EXPECTED_JOB_RESULT = [1, 2, 3]
 PATH_TO_SRC_DIR = "path/to/src/dir"
+HMAC_KEY = "some-hmac-key"
 
 
 def describe_training_job_response(job_status):
@@ -61,6 +62,7 @@ def describe_training_job_response(job_status):
             "VolumeSizeInGB": 30,
         },
         "OutputDataConfig": {"S3OutputPath": "s3://sagemaker-123/image_uri/output"},
+        "Environment": {"REMOTE_FUNCTION_SECRET_KEY": HMAC_KEY},
     }
 
 
@@ -518,11 +520,6 @@ def test_executor_submit_happy_case(mock_start, mock_job_settings, parallelism):
         future_3 = e.submit(job_function, 9, 10, c=11, d=12)
         future_4 = e.submit(job_function, 13, 14, c=15, d=16)
 
-    future_1.wait()
-    future_2.wait()
-    future_3.wait()
-    future_4.wait()
-
     mock_start.assert_has_calls(
         [
             call(ANY, job_function, (1, 2), {"c": 3, "d": 4}, None),
@@ -531,6 +528,10 @@ def test_executor_submit_happy_case(mock_start, mock_job_settings, parallelism):
             call(ANY, job_function, (13, 14), {"c": 15, "d": 16}, None),
         ]
     )
+    mock_job_1.describe.assert_called()
+    mock_job_2.describe.assert_called()
+    mock_job_3.describe.assert_called()
+    mock_job_4.describe.assert_called()
 
     assert future_1.done()
     assert future_2.done()
@@ -555,15 +556,14 @@ def test_executor_submit_with_run(mock_start, mock_job_settings, run_obj):
             future_1 = e.submit(job_function, 1, 2, c=3, d=4)
             future_2 = e.submit(job_function, 5, 6, c=7, d=8)
 
-    future_1.wait()
-    future_2.wait()
-
     mock_start.assert_has_calls(
         [
             call(ANY, job_function, (1, 2), {"c": 3, "d": 4}, run_info),
             call(ANY, job_function, (5, 6), {"c": 7, "d": 8}, run_info),
         ]
     )
+    mock_job_1.describe.assert_called()
+    mock_job_2.describe.assert_called()
 
     assert future_1.done()
     assert future_2.done()
@@ -573,15 +573,14 @@ def test_executor_submit_with_run(mock_start, mock_job_settings, run_obj):
             future_3 = e.submit(job_function, 9, 10, c=11, d=12)
             future_4 = e.submit(job_function, 13, 14, c=15, d=16)
 
-    future_3.wait()
-    future_4.wait()
-
     mock_start.assert_has_calls(
         [
             call(ANY, job_function, (9, 10), {"c": 11, "d": 12}, run_info),
             call(ANY, job_function, (13, 14), {"c": 15, "d": 16}, run_info),
         ]
     )
+    mock_job_3.describe.assert_called()
+    mock_job_4.describe.assert_called()
 
     assert future_3.done()
     assert future_4.done()
@@ -633,7 +632,7 @@ def test_executor_fails_to_start_job(mock_start, *args):
 
     with pytest.raises(TypeError):
         future_1.result()
-    future_2.wait()
+    print(future_2._state)
     assert future_2.done()
 
 
@@ -698,8 +697,6 @@ def test_executor_describe_job_throttled_temporarily(mock_start, *args):
         # submit second job
         future_2 = e.submit(job_function, 5, 6, c=7, d=8)
 
-    future_1.wait()
-    future_2.wait()
     assert future_1.done()
     assert future_2.done()
 
@@ -719,9 +716,9 @@ def test_executor_describe_job_failed_permanently(mock_start, *args):
         future_2 = e.submit(job_function, 5, 6, c=7, d=8)
 
     with pytest.raises(RuntimeError):
-        future_1.result()
+        future_1.done()
     with pytest.raises(RuntimeError):
-        future_2.result()
+        future_2.done()
 
 
 @pytest.mark.parametrize(
@@ -892,7 +889,7 @@ def test_future_get_result_from_completed_job(mock_start, mock_deserialize):
 def test_future_get_result_from_failed_job_remote_error_client_function(
     mock_start, mock_deserialize
 ):
-    mock_job = Mock(job_name=TRAINING_JOB_NAME, s3_uri=S3_URI)
+    mock_job = Mock(job_name=TRAINING_JOB_NAME, s3_uri=S3_URI, hmac_key=HMAC_KEY)
     mock_start.return_value = mock_job
     mock_job.describe.return_value = FAILED_TRAINING_JOB
 
@@ -907,7 +904,9 @@ def test_future_get_result_from_failed_job_remote_error_client_function(
 
     assert future.done()
     mock_job.wait.assert_called_once()
-    mock_deserialize.assert_called_with(sagemaker_session=ANY, s3_uri=f"{S3_URI}/exception")
+    mock_deserialize.assert_called_with(
+        sagemaker_session=ANY, s3_uri=f"{S3_URI}/exception", hmac_key=HMAC_KEY
+    )
 
 
 @patch("sagemaker.s3.S3Downloader.read_bytes")
@@ -1235,7 +1234,9 @@ def test_get_future_completed_job_deserialization_error(mock_session, mock_deser
         future.result()
 
     mock_deserialize.assert_called_with(
-        sagemaker_session=ANY, s3_uri="s3://sagemaker-123/image_uri/output/results"
+        sagemaker_session=ANY,
+        s3_uri="s3://sagemaker-123/image_uri/output/results",
+        hmac_key=HMAC_KEY,
     )
 
 
