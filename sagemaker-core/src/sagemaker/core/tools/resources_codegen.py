@@ -196,6 +196,10 @@ class ResourcesCodeGen:
             "from rich.status import Status",
             "from rich.style import Style",
             "from sagemaker.core.shapes import *",
+            # Emitted as comment lines so the generated file explains the alias below.
+            "# Alias the shapes `Tag`; the resource class `Tag` below shadows it, which breaks",
+            "# `tags` annotations under Python 3.14+ lazy annotations (PEP 649). See issue #6554.",
+            "from sagemaker.core.shapes import Tag as ShapeTag",
             "from sagemaker.core.helper.pipeline_variable import StrPipeVar",
             "from sagemaker.core.utils.code_injection.codec import transform",
             "from sagemaker.core.utils.code_injection.constants import Color",
@@ -306,6 +310,9 @@ class ResourcesCodeGen:
 
                 # If the resource class was successfully generated, write it to the file
                 if resource_class:
+                    # `tags` params use the shapes `Tag`, which the resource `Tag`
+                    # class shadows; the resource `Tag` never uses `List[Tag]`.
+                    resource_class = resource_class.replace("List[Tag]", "List[ShapeTag]")
                     file.write(f"{resource_class}\n\n")
 
         return output_file

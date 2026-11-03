@@ -752,6 +752,50 @@ class ResourcesTest(unittest.TestCase):
             pass
 
 
+class TestTagAnnotationResolution(unittest.TestCase):
+    """``tags`` annotations must resolve to the shapes ``Tag``, not the resource ``Tag``.
+
+    The resource class ``Tag`` shadows the shapes ``Tag`` that callers build, which
+    broke tagged requests under Python 3.14+ lazy annotations. See issue #6554.
+    """
+
+    def test_shape_and_resource_tag_are_distinct(self):
+        """Sanity check: the collision this guards against actually exists."""
+        from sagemaker.core import resources
+        from sagemaker.core.shapes import Tag as ShapeTag
+
+        self.assertIsNot(resources.Tag, ShapeTag)
+        self.assertIs(resources.ShapeTag, ShapeTag)
+
+    def test_tags_annotation_resolves_to_shape_tag(self):
+        import typing
+
+        from sagemaker.core import resources
+        from sagemaker.core.shapes import Tag as ShapeTag
+
+        hints = typing.get_type_hints(resources.HyperParameterTuningJob.create)
+        self.assertEqual(hints["tags"], typing.Optional[typing.List[ShapeTag]])
+
+    def test_create_accepts_shape_tag(self):
+        """A tagged HPO request built with the shapes ``Tag`` must validate."""
+        import typing
+
+        from pydantic import TypeAdapter
+
+        from sagemaker.core import resources
+        from sagemaker.core.shapes import Tag as ShapeTag
+
+        tags_annotation = typing.get_type_hints(resources.HyperParameterTuningJob.create)[
+            "tags"
+        ]
+        validated = TypeAdapter(tags_annotation).validate_python(
+            [ShapeTag(key="team", value="ml")]
+        )
+        self.assertIsInstance(validated[0], ShapeTag)
+        self.assertEqual(validated[0].key, "team")
+        self.assertEqual(validated[0].value, "ml")
+
+
 class TestWaitLogMarkup(unittest.TestCase):
     """Container log lines emitted while waiting must disable rich markup parsing.
 
